@@ -1,3 +1,5 @@
 .vscode/
 .cache/
 external/
+build
+builddir
