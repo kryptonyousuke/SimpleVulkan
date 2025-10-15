@@ -13,12 +13,12 @@ project(
 
 sdl3 = dependency('sdl3')
 vulkan = dependency('vulkan')
-
+inc = include_directories('include')
 
 
 # Source
 app_sources = [
-    'main.cpp'
+    'src/main.cpp'
 ]
 
 
@@ -26,5 +26,6 @@ app_sources = [
 executable(
     'SimpleVulkan', 
     app_sources,
-    dependencies: [sdl3, vulkan]
+    dependencies: [sdl3, vulkan],
+    include_directories: inc
 )
