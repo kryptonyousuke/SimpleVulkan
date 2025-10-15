@@ -19,10 +19,21 @@
 #include <set>
 #include <string>
 
-struct ApplicationInfo {
-    const char* applicationName;
-    const char* title;
-    int width;
-    int height;
-    bool resize = true;
-};
+
+namespace SimpleVulkan {
+    typedef const std::vector<const char*> ValidationLayers;
+    struct ApplicationInfo {
+        const char* applicationName;
+        const char* title;
+        int width;
+        int height;
+        bool resize = true;
+    };
+    struct QueueFamilyIndices {
+        std::optional<uint32_t> graphicsFamily{}; 
+        std::optional<uint32_t> presentFamily{}; 
+        bool isComplete() {
+            return graphicsFamily.has_value() && presentFamily.has_value();
+        }
+    };
+}

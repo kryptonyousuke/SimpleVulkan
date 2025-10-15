@@ -10,33 +10,6 @@ VULKAN_HPP_DEFAULT_DISPATCH_LOADER_DYNAMIC_STORAGE
 namespace SimpleVulkan {
 
     const bool enableValidationLayers = true;
-    const std::vector<const char*> validationLayers = {
-        "VK_LAYER_KHRONOS_validation"
-    };
-
-    // --- Funções Auxiliares ---
-    struct QueueFamilyIndices {
-        std::optional<uint32_t> graphicsFamily{}; 
-        std::optional<uint32_t> presentFamily{}; 
-        bool isComplete() {
-            return graphicsFamily.has_value() && presentFamily.has_value();
-        }
-    };
-    
-    bool checkValidationLayerSupport() {
-        auto availableLayers = vk::enumerateInstanceLayerProperties();
-        for (const char* layerName : validationLayers) {
-            bool layerFound = false;
-            for (const auto& layerProperties : availableLayers) {
-                if (strcmp(layerName, layerProperties.layerName) == 0) {
-                    layerFound = true;
-                    break;
-                }
-            }
-            if (!layerFound) return false;
-        }
-        return true;
-    }
 
     // Sobrecarga única de CreateSDL3Window
     SDL_Window* CreateSDL3Window(ApplicationInfo appInfo){
@@ -88,7 +61,7 @@ namespace SimpleVulkan {
         };
     }
 
-    vk::raii::Instance CreateVulkanInstance(){
+    vk::raii::Instance CreateVulkanInstance(ValidationLayers validationLayers){
         vk::raii::Context context{}; 
         
         // APP INFO
@@ -265,16 +238,18 @@ namespace SimpleVulkan {
 } // namespace SimpleVulkan
 
 int main(){
+    SimpleVulkan::ValidationLayers validationLayers = {
+        "VK_LAYER_KHRONOS_validation"
+    };
 
-
-    ApplicationInfo appInfo {
+    SimpleVulkan::ApplicationInfo appInfo {
         "Vulkan Square",
         "My window title",
         800,
         600,
     };
     SDL_Window* window = SimpleVulkan::CreateSDL3Window(appInfo);
-    vk::raii::Instance instance = SimpleVulkan::CreateVulkanInstance();
+    vk::raii::Instance instance = SimpleVulkan::CreateVulkanInstance(validationLayers);
     VkSurfaceKHR rawSurface;
     vk::raii::SurfaceKHR surface = SimpleVulkan::CreateSurface(instance, window, rawSurface);
     vk::raii::PhysicalDevice device = SimpleVulkan::PickPhysicalDevice(instance, surface);
@@ -296,5 +271,5 @@ int main(){
         }
     }
 
-    
+
 }
