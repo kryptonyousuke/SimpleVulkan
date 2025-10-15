@@ -1,19 +1,7 @@
-#include <algorithm>
 #define VULKAN_HPP_DISPATCH_LOADER_DYNAMIC 1
 #define VULKAN_HPP_CPP_VERSION 23
-#include <SDL3/SDL.h>
-#include <SDL3/SDL_vulkan.h>
-#include <vulkan/vulkan_core.h>
 #include "SimpleVulkan.hpp"
-#include <vulkan/vulkan_handles.hpp>
-#include <vulkan/vulkan_raii.hpp>
-#include <iostream> 
-#include <stdexcept> 
-#include <vector> 
-#include <cstring> 
-#include <cstdint>
-#include <optional>
-#include <set>
+
 
 
 VULKAN_HPP_DEFAULT_DISPATCH_LOADER_DYNAMIC_STORAGE
@@ -51,9 +39,9 @@ namespace SimpleVulkan {
     }
 
     // Sobrecarga única de CreateSDL3Window
-    SDL_Window* CreateSDL3Window(const char* title, int width, int height){
+    SDL_Window* CreateSDL3Window(ApplicationInfo appInfo){
         SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS);
-        SDL_Window* sdlWindow = SDL_CreateWindow(title, width, height, SDL_WINDOW_VULKAN | SDL_WINDOW_RESIZABLE);
+        SDL_Window* sdlWindow = SDL_CreateWindow(appInfo.title, appInfo.width, appInfo.height, SDL_WINDOW_VULKAN | SDL_WINDOW_RESIZABLE);
         return sdlWindow;
     }
 
@@ -278,7 +266,14 @@ namespace SimpleVulkan {
 
 int main(){
 
-    SDL_Window* window = SimpleVulkan::CreateSDL3Window("Vulkan Square", 800, 600);
+
+    ApplicationInfo appInfo {
+        "Vulkan Square",
+        "My window title",
+        800,
+        600,
+    };
+    SDL_Window* window = SimpleVulkan::CreateSDL3Window(appInfo);
     vk::raii::Instance instance = SimpleVulkan::CreateVulkanInstance();
     VkSurfaceKHR rawSurface;
     vk::raii::SurfaceKHR surface = SimpleVulkan::CreateSurface(instance, window, rawSurface);
@@ -291,7 +286,6 @@ int main(){
 
 
 
-
     bool running = true;
     while(running){
         SDL_Event event;
@@ -301,4 +295,6 @@ int main(){
             }
         }
     }
+
+    
 }
