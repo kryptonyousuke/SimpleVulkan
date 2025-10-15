@@ -3,6 +3,7 @@
 You can see it's usage below.</strong>
 
 ```cpp
+    #include <SimpleVulkan>
     int main(){
         SimpleVulkan::ValidationLayers validationLayers = {
             "VK_LAYER_KHRONOS_validation"
