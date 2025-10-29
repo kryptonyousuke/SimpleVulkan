@@ -1,5 +1,10 @@
+#include <cstdint>
+#include <stdexcept>
 #define VULKAN_HPP_DISPATCH_LOADER_DYNAMIC 1
 #define VULKAN_HPP_CPP_VERSION 23
+#include "vulkan/vulkan.hpp"
+#include <vulkan/vulkan_raii.hpp>
+
 #include "SimpleVulkan.hpp"
 
 
@@ -10,8 +15,6 @@ VULKAN_HPP_DEFAULT_DISPATCH_LOADER_DYNAMIC_STORAGE
 namespace SimpleVulkan {
 
     const bool enableValidationLayers = true;
-
-    // Sobrecarga única de CreateSDL3Window
     SDL_Window* CreateSDL3Window(ApplicationInfo appInfo){
         SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS);
         SDL_Window* sdlWindow = SDL_CreateWindow(appInfo.title, appInfo.width, appInfo.height, SDL_WINDOW_VULKAN | SDL_WINDOW_RESIZABLE);
@@ -29,7 +32,8 @@ namespace SimpleVulkan {
             }
         }
         extensions[0] = VK_EXT_DEBUG_UTILS_EXTENSION_NAME;
-        return extensions.data();
+        const char** extensionsData = extensions.data();
+        return extensionsData;
     }
     
     unsigned int getRequiredExtensionsCount() {
@@ -60,6 +64,8 @@ namespace SimpleVulkan {
             &debugCallback
         };
     }
+
+
 
     vk::raii::Instance CreateVulkanInstance(ValidationLayers validationLayers){
         vk::raii::Context context{}; 
@@ -106,9 +112,6 @@ namespace SimpleVulkan {
 
         return instance;
     }
-
-
-
 
 
 
@@ -191,6 +194,9 @@ namespace SimpleVulkan {
         it == devices.end() ? throw std::runtime_error("failed to find a suitable GPU. Trying to select the first") : void();
         std::cout << "GPU selecionada: " << it->getProperties().deviceName << std::endl; return *it;
     }
+
+
+
     vk::raii::Device CreateLogicalDevice(vk::raii::PhysicalDevice& PhysicalDevice, vk::raii::SurfaceKHR& surface, const std::optional<std::vector<const char*>>& deviceExtensions = std::nullopt){
         QueueFamilyIndices indices = findQueueFamilies(PhysicalDevice, surface, true);
         float queuePriority = 1.0f;
@@ -225,6 +231,9 @@ namespace SimpleVulkan {
         
         return vk::raii::Device{PhysicalDevice, createInfo};
     }
+
+
+
     
     std::array<vk::raii::Queue, 2> getQueues(vk::raii::PhysicalDevice& pdev, vk::raii::Device& ldev, vk::raii::SurfaceKHR& surface){
         QueueFamilyIndices indices = findQueueFamilies(pdev, surface);
@@ -233,6 +242,117 @@ namespace SimpleVulkan {
             vk::raii::Queue{ ldev, indices.presentFamily.value(), 0 }
         };
         return queues;
+    }
+
+    vk::SurfaceFormatKHR chooseSwapSurfaceFormat(const std::vector<vk::SurfaceFormatKHR>& availableFormats) {
+        for (const auto& availableFormat : availableFormats) {
+            if (availableFormat.format == vk::Format::eB8G8R8A8Srgb && availableFormat.colorSpace == vk::ColorSpaceKHR::eSrgbNonlinear) {
+                return availableFormat;
+            }
+        }
+        return availableFormats[0];
+    }
+
+
+    vk::PresentModeKHR choosePresentMode(const std::vector<vk::PresentModeKHR>& availablePresentModes) {
+        for (const auto& availablePresentMode : availablePresentModes) {
+            if (availablePresentMode == vk::PresentModeKHR::eMailbox) {
+                return availablePresentMode; // eMailBox selected (more consistent "vsync")
+            }
+        }
+        return vk::PresentModeKHR::eFifo; // eFifo selected (globally supported)
+    }
+
+    vk::Extent2D chooseExtent(const vk::SurfaceCapabilitiesKHR& capabilities, uint32_t width, uint32_t height) {
+        if (capabilities.currentExtent.width != std::numeric_limits<uint32_t>::max()){ // checks if the frame's width is'n higher than a 32 bits unsigned int
+            return capabilities.currentExtent;
+        } else {
+            vk::Extent2D actualExtent = {width, height};
+            actualExtent.width = std::clamp(actualExtent.width, capabilities.minImageExtent.width, capabilities.maxImageExtent.width);
+            actualExtent.height = std::clamp(actualExtent.height, capabilities.minImageExtent.height, capabilities.maxImageExtent.height);
+            return actualExtent;
+        }
+    }
+
+
+    SwapchainBundle CreateSwapchain(
+        vk::raii::Device& dev,
+        vk::raii::PhysicalDevice& pdev,
+        vk::raii::SurfaceKHR& surface,
+        const QueueFamilyIndices indices,
+        uint32_t width,
+        uint32_t height,
+        uint32_t imageCount = 2
+    ){
+        uint32_t imgsCount;
+        vk::SurfaceCapabilitiesKHR capabilities = pdev.getSurfaceCapabilitiesKHR(*surface);
+        std::vector<vk::SurfaceFormatKHR> formats = pdev.getSurfaceFormatsKHR(*surface);
+        std::vector<vk::PresentModeKHR> presentModes = pdev.getSurfacePresentModesKHR(*surface);
+        
+        vk::SurfaceFormatKHR surfaceFormat = chooseSwapSurfaceFormat(formats);
+        vk::PresentModeKHR presentMode = choosePresentMode(presentModes);
+        vk::Extent2D extent = chooseExtent(capabilities, width, height);
+        if (capabilities.maxImageCount > 0){
+            imgsCount = std::clamp(imageCount, capabilities.minImageCount, capabilities.maxImageCount);
+        }
+        else {
+            imgsCount = std::max(imageCount, capabilities.minImageCount);
+        }
+
+        vk::SwapchainCreateInfoKHR swapchainInfo {};
+        swapchainInfo.surface = *surface;
+        swapchainInfo.minImageCount = imgsCount;
+        swapchainInfo.imageFormat = surfaceFormat.format;
+        swapchainInfo.imageColorSpace = surfaceFormat.colorSpace;
+        swapchainInfo.imageExtent = extent;
+        swapchainInfo.imageArrayLayers = 1;
+        swapchainInfo.imageUsage = vk::ImageUsageFlagBits::eColorAttachment;
+        swapchainInfo.preTransform = capabilities.currentTransform;
+        swapchainInfo.compositeAlpha = vk::CompositeAlphaFlagBitsKHR::eOpaque;
+        swapchainInfo.presentMode = presentMode;
+        swapchainInfo.clipped = true;
+        swapchainInfo.oldSwapchain = nullptr;
+        
+
+        if (indices.graphicsFamily != indices.presentFamily) {
+            swapchainInfo.imageSharingMode = vk::SharingMode::eConcurrent;
+            swapchainInfo.queueFamilyIndexCount = 2;
+            swapchainInfo.pQueueFamilyIndices = &indices.graphicsFamily.value();
+        }
+        else {
+            swapchainInfo.imageSharingMode = vk::SharingMode::eExclusive;
+        }
+
+
+        vk::raii::SwapchainKHR swapchain{dev, swapchainInfo}; // swapchain itself
+        std::vector<vk::Image> images = swapchain.getImages();
+        std::vector<vk::raii::ImageView> imageViews;
+        imageViews.reserve(images.size());
+        for (const auto& image : images) {
+            vk::ImageViewCreateInfo viewInfo{
+                {},
+                image,
+                vk::ImageViewType::e2D,
+                surfaceFormat.format,
+                { vk::ComponentSwizzle::eIdentity,
+                  vk::ComponentSwizzle::eIdentity,
+                  vk::ComponentSwizzle::eIdentity,
+                  vk::ComponentSwizzle::eIdentity },
+                { vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 }
+            };
+            imageViews.emplace_back(dev, viewInfo);
+
+        }
+        std::cout << "SwapImage successfully created." << std::endl;
+        return SwapchainBundle{
+            std::move(swapchain),
+            surfaceFormat.format,
+            extent,
+            std::move(images),
+            std::move(imageViews)
+        };
+
+        
     }
 
 } // namespace SimpleVulkan
@@ -257,8 +377,9 @@ int main(){
         VK_KHR_SWAPCHAIN_EXTENSION_NAME
     };
     vk::raii::Device logicalDevice = SimpleVulkan::CreateLogicalDevice(device, surface, vulkanDeviceExtensions);
+    SimpleVulkan::QueueFamilyIndices queueIndices = SimpleVulkan::findQueueFamilies(device, surface);
     auto [graphicsQueue, presentQueue] = SimpleVulkan::getQueues(device, logicalDevice, surface);
-
+    SimpleVulkan::CreateSwapchain(logicalDevice, device, surface, queueIndices, 1920, 1080); // makes a swapchain with 1920x1080 as default resolution
 
 
     bool running = true;
@@ -270,6 +391,5 @@ int main(){
             }
         }
     }
-
 
 }

@@ -3,7 +3,13 @@
 You can see it's usage below.</strong>
 
 ```cpp
+    #define VULKAN_HPP_DISPATCH_LOADER_DYNAMIC 1
+    #define VULKAN_HPP_CPP_VERSION 23
+    
     #include <SimpleVulkan>
+
+    VULKAN_HPP_DEFAULT_DISPATCH_LOADER_DYNAMIC_STORAGE
+
     int main(){
         SimpleVulkan::ValidationLayers validationLayers = {
             "VK_LAYER_KHRONOS_validation"

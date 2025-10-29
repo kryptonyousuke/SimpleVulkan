@@ -18,6 +18,8 @@
 #include <optional>
 #include <set>
 #include <string>
+#include <limits>
+
 
 
 namespace SimpleVulkan {
@@ -36,4 +38,11 @@ namespace SimpleVulkan {
             return graphicsFamily.has_value() && presentFamily.has_value();
         }
     };
+    struct SwapchainBundle {
+        vk::raii::SwapchainKHR swapchain;
+        vk::Format imageFormat;
+        vk::Extent2D extent;
+        std::vector<vk::Image> images;                 // handles (not RAII)
+        std::vector<vk::raii::ImageView> imageViews;   // RAII image views
+}   ;
 }
